@@ -22,6 +22,8 @@ public class ThirdPersonController : NetworkBehaviour
         cameraTarget = transform; // Camera will always face this
     }
 
+    // Fixme: save all Inputs in Update, then look at saved values here and in FixedUpdate
+    // Fixme: camera code should be in its own script probably
     public void LateUpdate()
     {
         if (!isLocalPlayer)
@@ -61,16 +63,20 @@ public class ThirdPersonController : NetworkBehaviour
             newCameraPosition = hitInfo.point;
             lerpDistance = true;
         }
-        else if (lerpDistance)
+        else
         {
-            float newCameraDistance = Mathf.Lerp(Vector3.Distance(cameraTarget.position, Camera.main.transform.position), cameraDistance, 5.0f * Time.deltaTime);
-            newCameraPosition = cameraTarget.position + (Quaternion.Euler(cameraPitch, cameraYaw, 0) * Vector3.back * newCameraDistance);
+            if (lerpDistance)
+            {
+                float newCameraDistance = Mathf.Lerp(Vector3.Distance(cameraTarget.position, Camera.main.transform.position), cameraDistance, 5.0f * Time.deltaTime);
+                newCameraPosition = cameraTarget.position + (Quaternion.Euler(cameraPitch, cameraYaw, 0) * Vector3.back * newCameraDistance);
+            }
         }
 
         Camera.main.transform.position = newCameraPosition;
         Camera.main.transform.LookAt(cameraTarget.position);
     }
 
+    // Fixme: add running
     public void FixedUpdate()
     {
         if (!isLocalPlayer)
