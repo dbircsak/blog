@@ -14,6 +14,18 @@ public class ThirdPersonController : NetworkBehaviour
     bool lerpYaw = false;
     bool lerpDistance = false;
 
+    public float cameraPitchSpeed = 2.0f;
+    public float cameraPitchMin = -10.0f;
+    public float cameraPitchMax = 80.0f;
+    public float cameraYawSpeed = 5.0f;
+    public float cameraDistanceSpeed = 5.0f;
+    public float cameraDistanceMin = 2.0f;
+    public float cameraDistanceMax = 12.0f;
+    public float moveDirectionSpeed = 6.0f;
+    public float turnSpeed = 3.0f;
+    public float jumpSpeed = 8.0f;
+    public float gravitySpeed = 20.0f;
+
     public override void OnStartLocalPlayer()
     {
         GetComponent<MeshRenderer>().material.color = Color.blue;
@@ -32,9 +44,9 @@ public class ThirdPersonController : NetworkBehaviour
         // If mouse button down then allow user to look around
         if (Input.GetMouseButton(0) || Input.GetMouseButton(1))
         {
-            cameraPitch += Input.GetAxis("Mouse Y") * 2.0f;
-            cameraPitch = Mathf.Clamp(cameraPitch, -10.0f, 80.0f);
-            cameraYaw += Input.GetAxis("Mouse X") * 5.0f;
+            cameraPitch += Input.GetAxis("Mouse Y") * cameraPitchSpeed;
+            cameraPitch = Mathf.Clamp(cameraPitch, cameraPitchMin, cameraPitchMax);
+            cameraYaw += Input.GetAxis("Mouse X") * cameraYawSpeed;
             cameraYaw = cameraYaw % 360.0f;
             lerpYaw = false;
         }
@@ -48,8 +60,8 @@ public class ThirdPersonController : NetworkBehaviour
         // Zoom
         if (Input.GetAxis("Mouse ScrollWheel") != 0)
         {
-            cameraDistance -= Input.GetAxis("Mouse ScrollWheel") * 5.0f;
-            cameraDistance = Mathf.Clamp(cameraDistance, 2.0f, 12.0f);
+            cameraDistance -= Input.GetAxis("Mouse ScrollWheel") * cameraDistanceSpeed;
+            cameraDistance = Mathf.Clamp(cameraDistance, cameraDistanceMin, cameraDistanceMax);
             lerpDistance = false;
         }
 
@@ -92,7 +104,7 @@ public class ThirdPersonController : NetworkBehaviour
         if (Input.GetMouseButton(1))
             transform.rotation = Quaternion.Euler(0, cameraYaw, 0); // Face camera
         else
-            transform.Rotate(0, h * 3.0f, 0); // Turn left/right
+            transform.Rotate(0, h * turnSpeed, 0); // Turn left/right
 
         // Only allow user control when on ground
         if (controller.isGrounded)
@@ -103,12 +115,12 @@ public class ThirdPersonController : NetworkBehaviour
                 moveDirection = Vector3.forward * v; // Move forward/backward
 
             moveDirection = transform.TransformDirection(moveDirection);
-            moveDirection *= 6.0f;
+            moveDirection *= moveDirectionSpeed;
             if (Input.GetButton("Jump"))
-                moveDirection.y = 8.0f;
+                moveDirection.y = jumpSpeed;
         }
 
-        moveDirection.y -= 20.0f * Time.deltaTime; // Apply gravity
+        moveDirection.y -= gravitySpeed * Time.deltaTime; // Apply gravity
         controller.Move(moveDirection * Time.deltaTime);
     }
 }
