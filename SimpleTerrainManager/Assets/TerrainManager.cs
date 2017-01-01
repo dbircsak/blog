@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using System.Collections.Generic;
 
 public class TerrainManager : MonoBehaviour
 {
@@ -13,10 +14,21 @@ public class TerrainManager : MonoBehaviour
     {
         public GameObject gameObject;
         public float timeSinceNeeded;
+        public int[] neighborIndicies;
     }
     TerrainStruct[] terrainArray = new TerrainStruct[xTerrainMax * zTerrainMax];
     private static TerrainManager instance = null;
     float checkNeededTime = 0;
+
+    public void Start()
+    {
+        // Precompute values that will never change
+        for (int i = 0; i < terrainArray.Length; i++)
+        {
+            Vector3 pos = getAnchorPos(i);
+            terrainArray[i].neighborIndicies = getNeighborIndicies(pos);
+        }
+    }
 
     public void Awake()
     {
@@ -31,14 +43,32 @@ public class TerrainManager : MonoBehaviour
         // Every three seconds check to see if we need the loaded terrains
         if (checkNeededTime < Time.timeSinceLevelLoad)
         {
-            checkNeededTime = Time.timeSinceLevelLoad + 3.0f;
-            for (int i = 0; i < terrainArray.Length; i++)
+            checkNeededTime = Time.timeSinceLevelLoad + 1.0f;
+            updateArray();
+        }
+    }
+
+    // Fixme: move terrain loading to seperate thread
+    void updateArray()
+    {
+        for (int i = 0; i < terrainArray.Length; i++)
+        {
+            if (terrainArray[i].timeSinceNeeded < Time.timeSinceLevelLoad)
             {
                 if (terrainArray[i].gameObject == null)
                     continue;
                 // Don't need anymore so remove
-                if (terrainArray[i].timeSinceNeeded < Time.timeSinceLevelLoad)
-                    Destroy(terrainArray[i].gameObject);
+                Destroy(terrainArray[i].gameObject);
+            }
+            else
+            {
+                if (terrainArray[i].gameObject != null)
+                    continue;
+
+                // Load any needed terrain
+                TerrainData t = Resources.Load("Terrain" + i) as TerrainData;
+                terrainArray[i].gameObject = Terrain.CreateTerrainGameObject(t);
+                terrainArray[i].gameObject.transform.position = getAnchorPos(i);
             }
         }
     }
@@ -82,77 +112,39 @@ public class TerrainManager : MonoBehaviour
         int left = getIndex(new Vector3(pos.x, 0, pos.z - terrainSize));
         int right = getIndex(new Vector3(pos.x, 0, pos.z + terrainSize));
         int top = getIndex(new Vector3(pos.x - terrainSize, 0, pos.z));
+        int topleft = getIndex(new Vector3(pos.x - terrainSize, 0, pos.z - terrainSize));
+        int topright = getIndex(new Vector3(pos.x - terrainSize, 0, pos.z + terrainSize));
         int bottom = getIndex(new Vector3(pos.x + terrainSize, 0, pos.z));
-
+        int bottomleft = getIndex(new Vector3(pos.x + terrainSize, 0, pos.z - terrainSize));
+        int bottomright = getIndex(new Vector3(pos.x + terrainSize, 0, pos.z + terrainSize));
+        List<int> ans = new List<int>();
+        ans.Add(center);
         if (left != -1)
-        {
-            if (right != -1)
-            {
-                if (top != -1)
-                {
-                    if (bottom != -1) // We have everything
-                        return new int[] { top - 1, top, top + 1, center - 1, center, center + 1, bottom - 1, bottom, bottom + 1 };
-                    else // Remove bottom
-                        return new int[] { top - 1, top, top + 1, center - 1, center, center + 1 };
-                }
-                else
-                {
-                    if (bottom != -1) // Remove top
-                        return new int[] { center - 1, center, center + 1, bottom - 1, bottom, bottom + 1 };
-                }
-            }
-            else
-            {
-                if (top != -1)
-                {
-                    if (bottom != -1) // Remove right
-                        return new int[] { top - 1, top, center - 1, center, bottom - 1, bottom };
-                    else // Remove right and bottom
-                        return new int[] { top - 1, top, center - 1, center };
-                }
-                else
-                {
-                    if (bottom != -1) // Remove right and top
-                        return new int[] { center - 1, center, bottom - 1, bottom };
-                }
-            }
-        }
-        else
-        {
-            if (right != -1)
-            {
-                if (top != -1)
-                {
-                    if (bottom != -1) // Remove left
-                        return new int[] { top, top + 1, center, center + 1, bottom, bottom + 1 };
-                    else // Remove left and bottom
-                        return new int[] { top, top + 1, center, center + 1 };
-                }
-                else
-                {
-                    if (bottom != -1) // Remove left and top
-                        return new int[] { center, center + 1, bottom, bottom + 1 };
-                }
-            }
-        }
-        // Note function was written assuming xTerrainMax and zTerrainMax are never less than 3
-        return new int[] { };
+            ans.Add(left);
+        if (right != -1)
+            ans.Add(right);
+        if (top != -1)
+            ans.Add(top);
+        if (topleft != -1)
+            ans.Add(topleft);
+        if (topright != -1)
+            ans.Add(topright);
+        if (bottom != -1)
+            ans.Add(bottom);
+        if (bottomleft != -1)
+            ans.Add(bottomleft);
+        if (bottomright != -1)
+            ans.Add(bottomright);
+        return ans.ToArray();
     }
 
     void updateArray(int[] indicies)
     {
-        // Load any needed terrain
         for (int i = 0; i < indicies.Length; i++)
         {
             int index = indicies[i];
             if (index < 0 || index >= terrainArray.Length)
                 continue;
-            if (terrainArray[index].gameObject == null)
-            {
-                TerrainData t = Resources.Load("Terrain" + index) as TerrainData;
-                terrainArray[index].gameObject = Terrain.CreateTerrainGameObject(t);
-                terrainArray[index].gameObject.transform.position = getAnchorPos(index);
-            }
             // Mark as needed so it's not deleted
             terrainArray[index].timeSinceNeeded = Time.timeSinceLevelLoad + 1.0f;
         }
@@ -163,7 +155,9 @@ public class TerrainManager : MonoBehaviour
         // Player objects should be calling this
         if (instance == null)
             return;
-        int[] indicies = instance.getNeighborIndicies(pos);
-        instance.updateArray(indicies);
+        int center = instance.getIndex(pos);
+        if (center == -1)
+            return;
+        instance.updateArray(instance.terrainArray[center].neighborIndicies);
     }
 }
