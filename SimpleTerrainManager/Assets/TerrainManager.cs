@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using System.Collections;
 using System.Collections.Generic;
 
 public class TerrainManager : MonoBehaviour
@@ -15,6 +16,7 @@ public class TerrainManager : MonoBehaviour
         public GameObject gameObject;
         public float timeSinceNeeded;
         public int[] neighborIndicies;
+        public bool isLoading;
     }
     TerrainStruct[] terrainArray = new TerrainStruct[xTerrainMax * zTerrainMax];
     private static TerrainManager instance = null;
@@ -27,6 +29,7 @@ public class TerrainManager : MonoBehaviour
         {
             Vector3 pos = getAnchorPos(i);
             terrainArray[i].neighborIndicies = getNeighborIndicies(pos);
+            terrainArray[i].isLoading = false;
         }
     }
 
@@ -48,7 +51,6 @@ public class TerrainManager : MonoBehaviour
         }
     }
 
-    // Fixme: move terrain loading to seperate thread
     void updateArray()
     {
         for (int i = 0; i < terrainArray.Length; i++)
@@ -65,12 +67,24 @@ public class TerrainManager : MonoBehaviour
                 if (terrainArray[i].gameObject != null)
                     continue;
 
-                // Load any needed terrain
-                TerrainData t = Resources.Load("Terrain" + i) as TerrainData;
-                terrainArray[i].gameObject = Terrain.CreateTerrainGameObject(t);
-                terrainArray[i].gameObject.transform.position = getAnchorPos(i);
+                if (terrainArray[i].isLoading == false)
+                {
+                    terrainArray[i].isLoading = true;
+                    StartCoroutine(loadTerrain(i));
+                }
             }
         }
+    }
+
+    IEnumerator loadTerrain(int index)
+    {
+        // Load any needed terrain
+        ResourceRequest request = Resources.LoadAsync("Terrain" + index);
+        yield return null; // Wait for LoadAsync
+        TerrainData t = request.asset as TerrainData;
+        terrainArray[index].gameObject = Terrain.CreateTerrainGameObject(t);
+        terrainArray[index].gameObject.transform.position = getAnchorPos(index);
+        terrainArray[index].isLoading = false;
     }
 
     int getIndex(Vector3 pos)
