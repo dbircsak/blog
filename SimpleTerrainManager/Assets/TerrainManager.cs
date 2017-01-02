@@ -47,11 +47,11 @@ public class TerrainManager : MonoBehaviour
         if (checkNeededTime < Time.timeSinceLevelLoad)
         {
             checkNeededTime = Time.timeSinceLevelLoad + 1.0f;
-            updateArray();
+            manageArray();
         }
     }
 
-    void updateArray()
+    void manageArray()
     {
         for (int i = 0; i < terrainArray.Length; i++)
         {
