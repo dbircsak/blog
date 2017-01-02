@@ -4,35 +4,159 @@ using System.Collections.Generic;
 
 public class TerrainManager : MonoBehaviour
 {
-    // x goes top to bottom incrementally
-    // z goes from left to right incrementally
-    const int xTerrainMax = 3; // How many terrains high
-    const int zTerrainMax = 6; // How many terrains wide
-    const float terrainSize = 200.0f; // Size of each terrain
+    const int xMax = 3; // How many tiles our north-south is
+    const int zMax = 6; // How many tiles east-west is
+    const float terrainSize = 500.0f; // Size of each terrain tile
 
-    // Used to keep track of what terrain is loaded
-    struct TerrainStruct
+    // How we remember where each terrain object is in a Dictionary
+    class TerrainKey
     {
-        public GameObject gameObject;
-        public float timeSinceNeeded;
-        public int[] neighborIndicies;
-        public bool isLoading;
-    }
-    TerrainStruct[] terrainArray = new TerrainStruct[xTerrainMax * zTerrainMax];
-    private static TerrainManager instance = null;
-    float checkNeededTime = 0;
+        public int x;
+        public int z;
 
-    public void Start()
-    {
-        // Precompute values that will never change
-        for (int i = 0; i < terrainArray.Length; i++)
+        // Unity uses z instead of y for east-west
+        public TerrainKey(int x, int z)
         {
-            Vector3 pos = getAnchorPos(i);
-            terrainArray[i].neighborIndicies = getNeighborIndicies(pos);
-            terrainArray[i].isLoading = false;
+            this.x = x;
+            this.z = z;
+        }
+
+        // Get key from position
+        public TerrainKey(Vector3 pos)
+        {
+            x = Mathf.FloorToInt(pos.x / terrainSize);
+            z = Mathf.FloorToInt(pos.z / terrainSize);
+        }
+
+        // Might be outside range
+        public bool isValid()
+        {
+            if (x < 0 || x >= xMax)
+                return false;
+            if (z < 0 || z >= zMax)
+                return false;
+            return true;
+        }
+
+        // What tile keys are around us?
+        public TerrainKey[] getNeighbors()
+        {
+            if (!isValid())
+            {
+                Debug.Log("Calling getNeighbors with invalid key");
+                return new TerrainKey[] { };
+            }
+
+            TerrainKey left = new TerrainKey(x - 1, z);
+            TerrainKey right = new TerrainKey(x + 1, z);
+            TerrainKey top = new TerrainKey(x, z - 1);
+            TerrainKey topleft = new TerrainKey(x - 1, z - 1);
+            TerrainKey topright = new TerrainKey(x + 1, z - 1);
+            TerrainKey bottom = new TerrainKey(x, z + 1);
+            TerrainKey bottomleft = new TerrainKey(x - 1, z + 1);
+            TerrainKey bottomright = new TerrainKey(x + 1, z + 1);
+
+            if (left.isValid())
+            {
+                if (right.isValid())
+                {
+                    if (top.isValid())
+                    {
+                        if (bottom.isValid()) // Return all
+                            return new TerrainKey[] { topleft, top, topright, left, this, right, bottomleft, bottom, bottomright };
+                        else // Remove bottom
+                            return new TerrainKey[] { topleft, top, topright, left, this, right };
+                    }
+                    else
+                    {
+                        if (bottom.isValid()) // Remove top
+                            return new TerrainKey[] { left, this, right, bottomleft, bottom, bottomright };
+                    }
+                }
+                else
+                {
+                    if (top.isValid())
+                    {
+                        if (bottom.isValid()) // Remove right
+                            return new TerrainKey[] { topleft, top, left, this, bottomleft, bottom };
+                        else // Remove right and bottom
+                            return new TerrainKey[] { topleft, top, left, this };
+                    }
+                    else
+                    {
+                        if (bottom.isValid()) // Remove right and top
+                            return new TerrainKey[] { left, this, bottomleft, bottom };
+                    }
+                }
+            }
+            else
+            {
+                if (right.isValid())
+                {
+                    if (top.isValid())
+                    {
+                        if (bottom.isValid()) // Remove left
+                            return new TerrainKey[] { top, topright, this, right, bottom, bottomright };
+                        else // Remove left and bottom
+                            return new TerrainKey[] { top, topright, this, right };
+                    }
+                    else
+                    {
+                        if (bottom.isValid()) // Remove left and top
+                            return new TerrainKey[] { this, right, bottom, bottomright };
+                    }
+                }
+            }
+            // Some cases are left out because we should never be less than size 3
+            Debug.Log("xMax or zMax cannot be less than 3");
+            return new TerrainKey[] { };
+        }
+
+        // Returns top left most anchor point
+        public Vector3 getPos()
+        {
+            return new Vector3(x * terrainSize, 0, z * terrainSize);
+        }
+
+        public override string ToString()
+        {
+            // Also used when loading the terrain resource
+            return string.Format("Terrain{0}_{1}", x, z);
+        }
+
+        // Needed to compare two keys
+        public override bool Equals(object obj)
+        {
+            if (obj == null)
+                return false;
+            TerrainKey tk = obj as TerrainKey;
+            return x == tk.x && z == tk.z;
+        }
+
+        // Needed to compare two keys
+        public override int GetHashCode()
+        {
+            return x ^ z;
         }
     }
 
+    class TerrainValue
+    {
+        // Our terrain data
+        public TerrainValue()
+        {
+            gameObject = null;
+            lastNeeded = 0;
+            isLoading = false;
+        }
+
+        public GameObject gameObject;
+        public float lastNeeded; // Last time player needed tile
+        public bool isLoading; // Used with LoadAsync
+    }
+    Dictionary<TerrainKey, TerrainValue> terrainDictionary; // Store all terrain data here
+
+    private static TerrainManager instance = null;
     public void Awake()
     {
         if (instance == null)
@@ -41,137 +165,82 @@ public class TerrainManager : MonoBehaviour
             Destroy(gameObject);
     }
 
-    public void Update()
+    void Start()
     {
-        // Every three seconds check to see if we need the loaded terrains
-        if (checkNeededTime < Time.timeSinceLevelLoad)
-        {
-            checkNeededTime = Time.timeSinceLevelLoad + 1.0f;
-            manageArray();
-        }
+        // Set up our dictionary
+        terrainDictionary = new Dictionary<TerrainKey, TerrainValue>(xMax * zMax);
+        for (int x = 0; x < xMax; x++)
+            for (int z = 0; z < zMax; z++)
+                terrainDictionary.Add(new TerrainKey(x, z), new TerrainValue());
+
+        // Used in adding and removing terrain
+        StartCoroutine(manageDictionary());
     }
 
-    void manageArray()
+    // As terrain is flagged as needed or not needed this routine will load or destroy terrain
+    IEnumerator manageDictionary()
     {
-        for (int i = 0; i < terrainArray.Length; i++)
+        while (true)
         {
-            if (terrainArray[i].timeSinceNeeded < Time.timeSinceLevelLoad)
+            foreach (var pair in terrainDictionary)
             {
-                if (terrainArray[i].gameObject == null)
-                    continue;
-                // Don't need anymore so remove
-                Destroy(terrainArray[i].gameObject);
-            }
-            else
-            {
-                if (terrainArray[i].gameObject != null)
-                    continue;
-
-                if (terrainArray[i].isLoading == false)
+                if (pair.Value.lastNeeded <= Time.timeSinceLevelLoad)
                 {
-                    terrainArray[i].isLoading = true;
-                    StartCoroutine(loadTerrain(i));
+                    if (pair.Value.gameObject == null)
+                        continue;
+
+                    // Don't need terrain so remove
+                    Destroy(pair.Value.gameObject);
+                }
+                else
+                {
+                    if (pair.Value.gameObject != null)
+                        continue;
+
+                    // Need terrain so load
+                    if (!pair.Value.isLoading)
+                    {
+                        pair.Value.isLoading = true;
+                        StartCoroutine(loadTerrain(pair.Key));
+                    }
                 }
             }
+
+            // Check every second
+            yield return new WaitForSeconds(1.0f);
         }
     }
 
-    IEnumerator loadTerrain(int index)
+    // Loads terrain from resource and sets to correct position
+    IEnumerator loadTerrain(TerrainKey key)
     {
-        // Load any needed terrain
-        ResourceRequest request = Resources.LoadAsync("Terrain" + index);
-        yield return null; // Wait for LoadAsync
+        ResourceRequest request = Resources.LoadAsync(key.ToString());
+        yield return null; // Starts again when LoadAsync is done
+
         TerrainData t = request.asset as TerrainData;
-        terrainArray[index].gameObject = Terrain.CreateTerrainGameObject(t);
-        terrainArray[index].gameObject.transform.position = getAnchorPos(index);
-        terrainArray[index].isLoading = false;
+        terrainDictionary[key].gameObject = Terrain.CreateTerrainGameObject(t);
+        terrainDictionary[key].gameObject.transform.position = key.getPos();
+        terrainDictionary[key].isLoading = false;
     }
 
-    int getIndex(Vector3 pos)
-    {
-        // Index with xTerrainMax of 2 and zTerrainMax of 5 looks like this:
-        // 0 1 2 3 4
-        // 5 6 7 8 9
-        // If terrainSize is 100 and we're at Vector3(100, 0, 250) then index is 7
-        if (pos.x < 0 || pos.x >= terrainSize * xTerrainMax)
-            return -1;
-        if (pos.z < 0 || pos.z >= terrainSize * zTerrainMax)
-            return -1;
-        return ((Mathf.FloorToInt(pos.x / terrainSize) % xTerrainMax) * zTerrainMax) + (Mathf.FloorToInt(pos.z / terrainSize) % zTerrainMax);
-    }
-
-    Vector3 getAnchorPos(int index)
-    {
-        // Index with xTerrainMax of 2 and zTerrainMax of 5 looks like this:
-        // 0 1 2 3 4
-        // 5 6 7 8 9
-        // If index is 7 and terrainSize is 100 then return Vector3(100, 0, 200)
-        // Always return top left most coordinate
-        Vector3 pos = new Vector3();
-        pos.x = Mathf.FloorToInt(index / zTerrainMax) * terrainSize;
-        pos.z = (index % zTerrainMax) * terrainSize;
-        return pos;
-    }
-
-    int[] getNeighborIndicies(Vector3 pos)
-    {
-        // Index with xTerrainMax of 2 and zTerrainMax of 5 looks like this:
-        // 0 1 2 3 4
-        // 5 6 7 8 9
-        // If we are at 7 then we want to return 1, 2, 3, 6, 7, 8
-        // If we are at 0 then we want to return 0, 1, 5, 6
-        int center = getIndex(pos);
-        if (center == -1)
-            return new int[] { };
-        int left = getIndex(new Vector3(pos.x, 0, pos.z - terrainSize));
-        int right = getIndex(new Vector3(pos.x, 0, pos.z + terrainSize));
-        int top = getIndex(new Vector3(pos.x - terrainSize, 0, pos.z));
-        int topleft = getIndex(new Vector3(pos.x - terrainSize, 0, pos.z - terrainSize));
-        int topright = getIndex(new Vector3(pos.x - terrainSize, 0, pos.z + terrainSize));
-        int bottom = getIndex(new Vector3(pos.x + terrainSize, 0, pos.z));
-        int bottomleft = getIndex(new Vector3(pos.x + terrainSize, 0, pos.z - terrainSize));
-        int bottomright = getIndex(new Vector3(pos.x + terrainSize, 0, pos.z + terrainSize));
-        List<int> ans = new List<int>();
-        ans.Add(center);
-        if (left != -1)
-            ans.Add(left);
-        if (right != -1)
-            ans.Add(right);
-        if (top != -1)
-            ans.Add(top);
-        if (topleft != -1)
-            ans.Add(topleft);
-        if (topright != -1)
-            ans.Add(topright);
-        if (bottom != -1)
-            ans.Add(bottom);
-        if (bottomleft != -1)
-            ans.Add(bottomleft);
-        if (bottomright != -1)
-            ans.Add(bottomright);
-        return ans.ToArray();
-    }
-
-    void updateArray(int[] indicies)
-    {
-        for (int i = 0; i < indicies.Length; i++)
-        {
-            int index = indicies[i];
-            if (index < 0 || index >= terrainArray.Length)
-                continue;
-            // Mark as needed so it's not deleted
-            terrainArray[index].timeSinceNeeded = Time.timeSinceLevelLoad + 1.0f;
-        }
-    }
-
+    // Called by player objects
     public static void reportLocation(Vector3 pos)
     {
-        // Player objects should be calling this
         if (instance == null)
             return;
-        int center = instance.getIndex(pos);
-        if (center == -1)
+        TerrainKey key = new TerrainKey(pos);
+        if (!key.isValid())
+        {
+            Debug.Log("Player outside terrain area");
             return;
-        instance.updateArray(instance.terrainArray[center].neighborIndicies);
+        }
+
+        // Mark neighbors as being needed
+        TerrainKey[] neighbors = key.getNeighbors();
+        for (int i = 0; i < neighbors.Length; i++)
+        {
+            key = neighbors[i];
+            instance.terrainDictionary[key].lastNeeded = Time.timeSinceLevelLoad + 1.0f;
+        }
     }
 }

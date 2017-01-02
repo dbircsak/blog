@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using UnityEngine.Networking;
+using System.Collections;
 
 [RequireComponent(typeof(CharacterController))]
 public class ThirdPersonController : NetworkBehaviour
@@ -25,6 +26,23 @@ public class ThirdPersonController : NetworkBehaviour
     public float turnSpeed = 3.0f;
     public float jumpSpeed = 8.0f;
     public float gravitySpeed = 20.0f;
+
+    public void Start()
+    {
+        if (isLocalPlayer || isServer)
+            StartCoroutine(reportLocation());
+    }
+
+    // Needed to load correct terrain
+    IEnumerator reportLocation()
+    {
+        while (true)
+        {
+            TerrainManager.reportLocation(transform.position);
+
+            yield return new WaitForSeconds(1.0f);
+        }
+    }
 
     public override void OnStartLocalPlayer()
     {
@@ -122,12 +140,5 @@ public class ThirdPersonController : NetworkBehaviour
 
         moveDirection.y -= gravitySpeed * Time.deltaTime; // Apply gravity
         controller.Move(moveDirection * Time.deltaTime);
-    }
-
-    public void Update()
-    {
-        if (!(isLocalPlayer || isServer))
-            return;
-        TerrainManager.reportLocation(transform.position);
     }
 }
