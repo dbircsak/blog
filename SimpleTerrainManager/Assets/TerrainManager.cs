@@ -151,6 +151,7 @@ public class TerrainManager : MonoBehaviour
         }
 
         public GameObject gameObject;
+        public Terrain terrain;
         public float lastNeeded; // Last time player needed tile
         public bool isLoading; // Used with LoadAsync
     }
@@ -201,7 +202,7 @@ public class TerrainManager : MonoBehaviour
                     if (!pair.Value.isLoading)
                     {
                         pair.Value.isLoading = true;
-                        StartCoroutine(loadTerrain(pair.Key));
+                        StartCoroutine(loadTerrain(pair));
                     }
                 }
             }
@@ -212,15 +213,16 @@ public class TerrainManager : MonoBehaviour
     }
 
     // Loads terrain from resource and sets to correct position
-    IEnumerator loadTerrain(TerrainKey key)
+    IEnumerator loadTerrain(KeyValuePair<TerrainKey, TerrainValue> pair)
     {
-        ResourceRequest request = Resources.LoadAsync(key.ToString());
+        ResourceRequest request = Resources.LoadAsync(pair.Key.ToString());
         yield return null; // Starts again when LoadAsync is done
 
         TerrainData t = request.asset as TerrainData;
-        terrainDictionary[key].gameObject = Terrain.CreateTerrainGameObject(t);
-        terrainDictionary[key].gameObject.transform.position = key.getPos();
-        terrainDictionary[key].isLoading = false;
+        pair.Value.gameObject = Terrain.CreateTerrainGameObject(t);
+        pair.Value.gameObject.transform.position = pair.Key.getPos();
+        pair.Value.terrain = pair.Value.gameObject.GetComponent<Terrain>();
+        pair.Value.isLoading = false;
     }
 
     // Called by player objects
