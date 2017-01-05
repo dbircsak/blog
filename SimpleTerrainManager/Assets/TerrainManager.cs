@@ -49,12 +49,12 @@ public class TerrainManager : MonoBehaviour
 
             TerrainKey left = new TerrainKey(x - 1, z);
             TerrainKey right = new TerrainKey(x + 1, z);
-            TerrainKey top = new TerrainKey(x, z - 1);
-            TerrainKey topleft = new TerrainKey(x - 1, z - 1);
-            TerrainKey topright = new TerrainKey(x + 1, z - 1);
-            TerrainKey bottom = new TerrainKey(x, z + 1);
-            TerrainKey bottomleft = new TerrainKey(x - 1, z + 1);
-            TerrainKey bottomright = new TerrainKey(x + 1, z + 1);
+            TerrainKey top = new TerrainKey(x, z + 1);
+            TerrainKey topleft = new TerrainKey(x - 1, z + 1);
+            TerrainKey topright = new TerrainKey(x + 1, z + 1);
+            TerrainKey bottom = new TerrainKey(x, z - 1);
+            TerrainKey bottomleft = new TerrainKey(x - 1, z - 1);
+            TerrainKey bottomright = new TerrainKey(x + 1, z - 1);
 
             if (left.isValid())
             {
@@ -156,6 +156,7 @@ public class TerrainManager : MonoBehaviour
         public bool isLoading; // Used with LoadAsync
     }
     Dictionary<TerrainKey, TerrainValue> terrainDictionary; // Store all terrain data here
+    float lastSetNeighbors = 0;
 
     private static TerrainManager instance = null;
     public void Awake()
@@ -207,6 +208,16 @@ public class TerrainManager : MonoBehaviour
                 }
             }
 
+            if (lastSetNeighbors != 0 && lastSetNeighbors < Time.timeSinceLevelLoad)
+            {
+                lastSetNeighbors = 0;
+                foreach (var pair in terrainDictionary)
+                {
+                    if (pair.Value.gameObject != null)
+                        setNeighbors(pair.Key);
+                }
+            }
+
             // Check every second
             yield return new WaitForSeconds(1.0f);
         }
@@ -223,6 +234,8 @@ public class TerrainManager : MonoBehaviour
         pair.Value.gameObject.transform.position = pair.Key.getPos();
         pair.Value.terrain = pair.Value.gameObject.GetComponent<Terrain>();
         pair.Value.isLoading = false;
+
+        lastSetNeighbors = Time.timeSinceLevelLoad + 1.0f;
     }
 
     // Called by player objects
@@ -244,5 +257,25 @@ public class TerrainManager : MonoBehaviour
             key = neighbors[i];
             instance.terrainDictionary[key].lastNeeded = Time.timeSinceLevelLoad + 1.0f;
         }
+    }
+
+    Terrain getTerrain(TerrainKey tk)
+    {
+        if (!tk.isValid())
+            return null;
+        if (terrainDictionary[tk].gameObject == null)
+            return null;
+        return terrainDictionary[tk].terrain;
+    }
+
+    void setNeighbors(TerrainKey tk)
+    {
+        if (!tk.isValid())
+            return;
+        Terrain left = getTerrain(new TerrainKey(tk.x - 1, tk.z));
+        Terrain top = getTerrain(new TerrainKey(tk.x, tk.z + 1));
+        Terrain right = getTerrain(new TerrainKey(tk.x + 1, tk.z));
+        Terrain bottom = getTerrain(new TerrainKey(tk.x, tk.z - 1));
+        getTerrain(tk).SetNeighbors(left, top, right, bottom);
     }
 }
