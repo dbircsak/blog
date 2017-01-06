@@ -152,6 +152,7 @@ public class TerrainManager : MonoBehaviour
 
         public GameObject gameObject;
         public Terrain terrain;
+        public TerrainKey[] neighbors; // Probably not the right place to store this
         public float lastNeeded; // Last time player needed tile
         public bool isLoading; // Used with LoadAsync
     }
@@ -174,6 +175,9 @@ public class TerrainManager : MonoBehaviour
         for (int x = 0; x < xMax; x++)
             for (int z = 0; z < zMax; z++)
                 terrainDictionary.Add(new TerrainKey(x, z), new TerrainValue());
+
+        foreach (var pair in terrainDictionary)
+            pair.Value.neighbors = pair.Key.getNeighbors();
 
         // Used in adding and removing terrain
         StartCoroutine(manageDictionary());
@@ -251,7 +255,7 @@ public class TerrainManager : MonoBehaviour
         }
 
         // Mark neighbors as being needed
-        TerrainKey[] neighbors = key.getNeighbors();
+        TerrainKey[] neighbors = instance.terrainDictionary[key].neighbors;
         for (int i = 0; i < neighbors.Length; i++)
         {
             key = neighbors[i];
