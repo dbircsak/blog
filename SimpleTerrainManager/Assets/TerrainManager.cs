@@ -231,6 +231,11 @@ public class TerrainManager : MonoBehaviour
     IEnumerator loadTerrain(KeyValuePair<TerrainKey, TerrainValue> pair)
     {
         ResourceRequest request = Resources.LoadAsync(pair.Key.ToString());
+        if (request.asset == null)
+        {
+            Debug.Log("Unable to find terrain " + pair.Key.ToString());
+            yield break;
+        }
         yield return null; // Starts again when LoadAsync is done
 
         TerrainData t = request.asset as TerrainData;

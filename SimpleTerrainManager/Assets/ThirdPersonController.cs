@@ -136,6 +136,8 @@ public class ThirdPersonController : NetworkBehaviour
             moveDirection *= moveDirectionSpeed;
             if (Input.GetButton("Jump"))
                 moveDirection.y = jumpSpeed;
+            if (Input.GetKey(KeyCode.LeftShift))
+                moveDirection *= 10;
         }
 
         moveDirection.y -= gravitySpeed * Time.deltaTime; // Apply gravity
