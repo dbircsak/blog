@@ -58,6 +58,17 @@ public class SplitTerrain : EditorWindow
                 }
             }
             EditorUtility.ClearProgressBar();
+
+            for (int x = 0; x < xLen; x++)
+            {
+                for (int z = 0; z < zLen; z++)
+                {
+                    GameObject center = GameObject.Find(string.Format("{0}{1}_{2}", origTerrain.name, x, z));
+                    GameObject left = GameObject.Find(string.Format("{0}{1}_{2}", origTerrain.name, x - 1, z));
+                    GameObject top = GameObject.Find(string.Format("{0}{1}_{2}", origTerrain.name, x, z + 1));
+                    stitchTerrain(center, left, top);
+                }
+            }
         }
     }
 
@@ -159,7 +170,7 @@ public class SplitTerrain : EditorWindow
                 newHeights[i, j] = heights[Mathf.FloorToInt(i * dimRatio1), Mathf.FloorToInt(j * dimRatio2)];
             }
         }
-        td.SetHeights(0, 0, newHeights);
+        td.SetHeightsDelayLOD(0, 0, newHeights);
 
         // Detail
         td.SetDetailResolution(detailResolution, 8); // Default? Haven't messed with resolutionPerPatch
@@ -226,5 +237,42 @@ public class SplitTerrain : EditorWindow
         td.size = new Vector3(xMax - xMin, origTerrain.terrainData.size.y, zMax - zMin);
 
         AssetDatabase.SaveAssets();
+    }
+
+    void stitchTerrain(GameObject center, GameObject left, GameObject top)
+    {
+        if (center == null)
+            return;
+        Terrain centerTerrain = center.GetComponent<Terrain>();
+        float[,] centerHeights = centerTerrain.terrainData.GetHeights(0, 0, centerTerrain.terrainData.heightmapWidth, centerTerrain.terrainData.heightmapHeight);
+        if (top != null)
+        {
+            Terrain topTerrain = top.GetComponent<Terrain>();
+            float[,] topHeights = topTerrain.terrainData.GetHeights(0, 0, topTerrain.terrainData.heightmapWidth, topTerrain.terrainData.heightmapHeight);
+            if (topHeights.GetLength(0) != centerHeights.GetLength(0))
+            {
+                Debug.Log("Terrain sizes must be equal");
+                return;
+            }
+            for (int i = 0; i < centerHeights.GetLength(1); i++)
+            {
+                centerHeights[centerHeights.GetLength(0) - 1, i] = topHeights[0, i];
+            }
+        }
+        if (left != null)
+        {
+            Terrain leftTerrain = left.GetComponent<Terrain>();
+            float[,] leftHeights = leftTerrain.terrainData.GetHeights(0, 0, leftTerrain.terrainData.heightmapWidth, leftTerrain.terrainData.heightmapHeight);
+            if (leftHeights.GetLength(0) != centerHeights.GetLength(0))
+            {
+                Debug.Log("Terrain sizes must be equal");
+                return;
+            }
+            for (int i = 0; i < centerHeights.GetLength(0); i++)
+            {
+                centerHeights[i, 0] = leftHeights[i, leftHeights.GetLength(1) - 1];
+            }
+        }
+        centerTerrain.terrainData.SetHeights(0, 0, centerHeights);
     }
 }
