@@ -155,19 +155,16 @@ public class SplitTerrain : EditorWindow
 
         // Height
         td.heightmapResolution = heightmapResolution;
-        float[,] heights = origTerrain.terrainData.GetHeights(
-                      Mathf.FloorToInt(xMinNorm * origTerrain.terrainData.heightmapWidth),
-                      Mathf.FloorToInt(zMinNorm * origTerrain.terrainData.heightmapHeight),
-                      Mathf.FloorToInt((xMaxNorm - xMinNorm) * origTerrain.terrainData.heightmapWidth),
-                      Mathf.FloorToInt((zMaxNorm - zMinNorm) * origTerrain.terrainData.heightmapHeight));
         float[,] newHeights = new float[heightmapResolution, heightmapResolution];
-        dimRatio1 = (float)heights.GetLength(0) / heightmapResolution;
-        dimRatio2 = (float)heights.GetLength(1) / heightmapResolution;
-        for (int i = 0; i < newHeights.GetLength(0); i++)
+        dimRatio1 = (xMax - xMin) / heightmapResolution;
+        dimRatio2 = (zMax - zMin) / heightmapResolution;
+        for (int i = 0; i < heightmapResolution; i++)
         {
-            for (int j = 0; j < newHeights.GetLength(1); j++)
+            for (int j = 0; j < heightmapResolution; j++)
             {
-                newHeights[i, j] = heights[Mathf.FloorToInt(i * dimRatio1), Mathf.FloorToInt(j * dimRatio2)];
+                // Divide by size.y because height is stored as percentage
+                // Note this is [j, i] and not [i, j] (Why?!)
+                newHeights[j, i] = origTerrain.SampleHeight(new Vector3(xMin + (i * dimRatio1), 0, zMin + (j * dimRatio2))) / origTerrain.terrainData.size.y;
             }
         }
         td.SetHeightsDelayLOD(0, 0, newHeights);
