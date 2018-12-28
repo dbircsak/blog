@@ -59,16 +59,17 @@ public class SplitTerrain : EditorWindow
             }
             EditorUtility.ClearProgressBar();
 
-            for (int x = 0; x < xLen; x++)
-            {
-                for (int z = 0; z < zLen; z++)
-                {
-                    GameObject center = GameObject.Find(string.Format("{0}{1}_{2}", origTerrain.name, x, z));
-                    GameObject left = GameObject.Find(string.Format("{0}{1}_{2}", origTerrain.name, x - 1, z));
-                    GameObject top = GameObject.Find(string.Format("{0}{1}_{2}", origTerrain.name, x, z + 1));
-                    stitchTerrain(center, left, top);
-                }
-            }
+            // No longer needed
+            //for (int x = 0; x < xLen; x++)
+            //{
+            //    for (int z = 0; z < zLen; z++)
+            //    {
+            //        GameObject center = GameObject.Find(string.Format("{0}{1}_{2}", origTerrain.name, x, z));
+            //        GameObject left = GameObject.Find(string.Format("{0}{1}_{2}", origTerrain.name, x - 1, z));
+            //        GameObject top = GameObject.Find(string.Format("{0}{1}_{2}", origTerrain.name, x, z + 1));
+            //        stitchTerrain(center, left, top);
+            //    }
+            //}
         }
     }
 
@@ -156,8 +157,8 @@ public class SplitTerrain : EditorWindow
         // Height
         td.heightmapResolution = heightmapResolution;
         float[,] newHeights = new float[heightmapResolution, heightmapResolution];
-        dimRatio1 = (xMax - xMin) / heightmapResolution;
-        dimRatio2 = (zMax - zMin) / heightmapResolution;
+        dimRatio1 = (xMax - xMin) / (heightmapResolution - 1);
+        dimRatio2 = (zMax - zMin) / (heightmapResolution - 1);
         for (int i = 0; i < heightmapResolution; i++)
         {
             for (int j = 0; j < heightmapResolution; j++)
