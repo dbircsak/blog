@@ -15,6 +15,7 @@ public class NetworkGUI : MonoBehaviour
     }
     static readonly int byteCountArrayMax = 10;
     byteCountStruct[] byteCountArray = new byteCountStruct[byteCountArrayMax];
+    ulong rtt = 0;
 
     // Run every 1/10 sec and store 10 for one sec of data
     IEnumerator calcByteCount()
@@ -45,6 +46,9 @@ public class NetworkGUI : MonoBehaviour
                 }
                 if (historyTooSmall)
                     Debug.LogError("NetworkProfiler history too small for network traffic. Increase profilerHistoryLength");
+
+                // Broken in Ruffles at moment
+                //rtt = NetworkingManager.Singleton.NetworkConfig.NetworkTransport.GetCurrentRtt(NetworkingManager.Singleton.LocalClientId);
             }
             byteCountArray[byteCountArrayIndex] = byteCount;
             byteCountArrayIndex++;
@@ -102,6 +106,6 @@ public class NetworkGUI : MonoBehaviour
         }
 
         // Counts do not include MLAPI overhead!
-        GUILayout.Label($"Sent: {byteCountArray.Sum(n => n.send)} bps Recv: {byteCountArray.Sum(n => n.receive)} bps");
+        GUILayout.Label($"Sent: {byteCountArray.Sum(n => n.send)} bps Recv: {byteCountArray.Sum(n => n.receive)} bps Rtt: {rtt} ms");
     }
 }
