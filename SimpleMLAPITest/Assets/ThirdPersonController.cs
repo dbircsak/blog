@@ -47,11 +47,9 @@ public class ThirdPersonController : NetworkedBehaviour
     readonly float cameraDistanceMax = 20.0f;
 
     bool lerpYaw = false;
-    readonly float lerpYawSpeed = 0.1f;
-    float lerpYawTime;
+    readonly float lerpYawSpeed = 10.0f;
     bool lerpDistance = false;
     readonly float lerpDistanceSpeed = 10.0f;
-    float lerpDistanceTime;
 
     public override void NetworkStart()
     {
@@ -148,22 +146,13 @@ public class ThirdPersonController : NetworkedBehaviour
             // Have camera follow if moving
             // Note: keep inside this else so you can turn and move at same time
             if (inputHorizontal != 0 || inputVertical != 0)
-            {
                 lerpYaw = true;
-                lerpYawTime = 0.0f;
-            }
             else
-            {
                 lerpYaw = false;
-            }
         }
         if (lerpYaw)
-        {
-            lerpYawTime += Time.deltaTime;
-            if (lerpYawTime > lerpYawSpeed)
-                lerpYawTime = lerpYawSpeed;
-            cameraYaw = Mathf.LerpAngle(cameraYaw, cameraTarget.eulerAngles.y, lerpYawTime / lerpYawSpeed) % 360.0f;
-        }
+            // Fake way to Lerp but I don't care
+            cameraYaw = Mathf.LerpAngle(cameraYaw, cameraTarget.eulerAngles.y, lerpYawSpeed * Time.deltaTime) % 360.0f;
 
         // Distance
         if (inputMouseScrollWheel != 0)
@@ -181,16 +170,13 @@ public class ThirdPersonController : NetworkedBehaviour
         {
             newCameraPosition = hitInfo.point;
             lerpDistance = true;
-            lerpDistanceTime = 0.0f;
         }
         else
         {
             if (lerpDistance)
             {
-                lerpDistanceTime += Time.deltaTime;
-                if (lerpDistanceTime > lerpDistanceSpeed)
-                    lerpDistanceTime = lerpDistanceSpeed;
-                float newCameraDistance = Mathf.Lerp(Vector3.Distance(cameraTarget.position, Camera.main.transform.position), cameraDistance, lerpDistanceTime / lerpDistanceSpeed);
+                // Fake way to Lerp but I don't care
+                float newCameraDistance = Mathf.Lerp(Vector3.Distance(cameraTarget.position, Camera.main.transform.position), cameraDistance, lerpDistanceSpeed * Time.deltaTime);
                 newCameraPosition = cameraTarget.position + (Quaternion.Euler(cameraPitch, cameraYaw, 0) * Vector3.back * newCameraDistance);
             }
         }
