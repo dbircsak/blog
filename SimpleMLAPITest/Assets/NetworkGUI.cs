@@ -47,10 +47,8 @@ public class NetworkGUI : MonoBehaviour
                 if (historyTooSmall)
                     Debug.LogError("NetworkProfiler history too small for network traffic. Increase profilerHistoryLength");
 
-                if (NetworkingManager.Singleton.IsConnectedClient)
-                    rtt = NetworkingManager.Singleton.NetworkConfig.NetworkTransport.GetCurrentRtt(NetworkingManager.Singleton.LocalClientId);
-                else
-                    rtt = 0;
+                // Broken in Ruffles at moment
+                //rtt = NetworkingManager.Singleton.NetworkConfig.NetworkTransport.GetCurrentRtt(NetworkingManager.Singleton.LocalClientId);
             }
             byteCountArray[byteCountArrayIndex] = byteCount;
             byteCountArrayIndex++;
