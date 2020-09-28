@@ -27,8 +27,6 @@ public class ServerPlayerObjects : NetworkedBehaviour
     void ClientDisconnected(ulong clientId)
     {
         playerObjectDict.Remove(clientId);
-        if (HandlePlayerCmds.playerCmdsDict.ContainsKey(clientId))
-            HandlePlayerCmds.playerCmdsDict.Remove(clientId);
     }
 
     void Start()

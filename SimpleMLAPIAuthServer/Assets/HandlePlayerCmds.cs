@@ -14,10 +14,22 @@ public class HandlePlayerCmds : NetworkedBehaviour
     readonly CustomTypes.PlayerCmdSet playerCmdSet = new CustomTypes.PlayerCmdSet();
     float lastPlayerCmdRecordTime = 0.0f;
 
+    ulong clientSeq = 0;
+    Dictionary<ulong, ulong> serverSeqDict = new Dictionary<ulong, ulong>();
+
+    void ClientDisconnected(ulong clientId)
+    {
+        if (playerCmdsDict.ContainsKey(clientId))
+            playerCmdsDict.Remove(clientId);
+        if (serverSeqDict.ContainsKey(clientId))
+            serverSeqDict.Remove(clientId);
+    }
+
     void Start()
     {
         for (int i = 0; i < CustomTypes.PlayerCmdSet.Max; i++)
             playerCmdSet.playerCmds[i] = new CustomTypes.PlayerCmd();
+        NetworkingManager.Singleton.OnClientDisconnectCallback += ClientDisconnected;
     }
 
     void Update()
@@ -31,20 +43,21 @@ public class HandlePlayerCmds : NetworkedBehaviour
         lastPlayerCmdRecordTime = Time.time;
 
         // Record input
-        CustomTypes.PlayerCmd PlayerCmd = playerCmdSet.playerCmds[playerCmdSet.cmdIndex];
-        PlayerCmd.mouseButton0 = Input.GetMouseButton(0);
-        PlayerCmd.mouseButton1 = Input.GetMouseButton(1);
-        PlayerCmd.jumpButton = Input.GetButton("Jump");
-        PlayerCmd.leftShiftKey = Input.GetKey(KeyCode.LeftShift);
-        PlayerCmd.horizontal = Input.GetAxis("Horizontal");
-        PlayerCmd.vertical = Input.GetAxis("Vertical");
+        CustomTypes.PlayerCmd playerCmd = playerCmdSet.playerCmds[playerCmdSet.cmdIndex];
+        playerCmd.mouseButton0 = Input.GetMouseButton(0);
+        playerCmd.mouseButton1 = Input.GetMouseButton(1);
+        playerCmd.jumpButton = Input.GetButton("Jump");
+        playerCmd.leftShiftKey = Input.GetKey(KeyCode.LeftShift);
+        playerCmd.horizontal = Input.GetAxis("Horizontal");
+        playerCmd.vertical = Input.GetAxis("Vertical");
         playerCmdSet.cmdIndex++;
 
         // Send out after recording Max
         if (playerCmdSet.cmdIndex == CustomTypes.PlayerCmdSet.Max)
         {
+            clientSeq++;
             // FIXME: Send if cmds are empty?
-            InvokeServerRpc(ReceivePlayerCmds, playerCmdSet.playerCmds);
+            InvokeServerRpc(ReceivePlayerCmds, clientSeq, playerCmdSet.playerCmds);
             playerCmdSet.cmdIndex = 0;
         }
     }
@@ -53,10 +66,28 @@ public class HandlePlayerCmds : NetworkedBehaviour
     static public Dictionary<ulong, CustomTypes.PlayerCmdSet> playerCmdsDict = new Dictionary<ulong, CustomTypes.PlayerCmdSet>();
 
     [ServerRPC(RequireOwnership = false)]
-    public void ReceivePlayerCmds(CustomTypes.PlayerCmd[] playerCmds)
+    public void ReceivePlayerCmds(ulong seq, CustomTypes.PlayerCmd[] playerCmds)
     {
         CustomTypes.PlayerCmdSet playerCmdSet;
         ulong clientId = ExecutingRpcSender;
+
+        if (serverSeqDict.ContainsKey(clientId))
+        {
+            if (seq <= serverSeqDict[clientId])
+            {
+                //Debug.Log($"Client {clientId} cmd seq was {seq}, expected {serverSeqDict[clientId] + 1}. Dropping!");
+                return;
+            }
+            if (seq != serverSeqDict[clientId] + 1)
+            {
+                //Debug.Log($"Client {clientId} cmd seq was {seq}, expected {serverSeqDict[clientId] + 1}");
+            }
+            serverSeqDict[clientId] = seq;
+        }
+        else
+        {
+            serverSeqDict.Add(clientId, seq);
+        }
 
         if (playerCmdsDict.ContainsKey(clientId))
         {
