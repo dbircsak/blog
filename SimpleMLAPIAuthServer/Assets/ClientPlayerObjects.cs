@@ -76,9 +76,13 @@ public class ClientPlayerObjects : NetworkedBehaviour
 
     }
 
+    CustomTypes.SeqCheck seqCheck = new CustomTypes.SeqCheck();
+
     [ClientRPC]
-    public void ReceivePlayerStates(List<CustomTypes.PlayerState> ps)
+    public void ReceivePlayerStates(uint seq, List<CustomTypes.PlayerState> ps)
     {
+        if (!seqCheck.AssignNew(seq))
+            return;
         playerStates = ps;
         updatePlayerObjectDict = true;
     }

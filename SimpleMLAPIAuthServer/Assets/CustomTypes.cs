@@ -66,6 +66,27 @@ public class CustomTypes : NetworkedBehaviour
         }
     }
 
+    public class SeqCheck
+    {
+        public uint seq = 0;
+        public uint miss = 0;
+
+        // If seq new then assign and return true
+        // If old then accept it after third time (show mercy)
+        public bool AssignNew(uint newSeq)
+        {
+            if (newSeq <= seq && miss < 3)
+            {
+                //Debug.Log($"{newSeq} seq less than {seq}");
+                miss++;
+                return false;
+            }
+            seq = newSeq;
+            miss = 0;
+            return true;
+        }
+    }
+
     // Client calls this
     void SerializePlayerCmds(System.IO.Stream stream, PlayerCmd[] instance)
     {

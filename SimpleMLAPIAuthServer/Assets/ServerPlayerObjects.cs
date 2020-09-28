@@ -23,6 +23,7 @@ public class ServerPlayerObjects : NetworkedBehaviour
     float lastPlayerStatesSendTime = 0.0f;
     float lastCmdIndexIncTime = 0.0f;
     bool cmdIndexInc = false;
+    uint seq = 0;
 
     void ClientDisconnected(ulong clientId)
     {
@@ -148,7 +149,8 @@ public class ServerPlayerObjects : NetworkedBehaviour
         if (playerStates.Count > 0)
         {
             // Send player states to connected clients
-            clientPlayerObjects.InvokeClientRpcOnEveryone(clientPlayerObjects.ReceivePlayerStates, playerStates);
+            clientPlayerObjects.InvokeClientRpcOnEveryone(clientPlayerObjects.ReceivePlayerStates, seq, playerStates);
+            seq++;
         }
     }
 }

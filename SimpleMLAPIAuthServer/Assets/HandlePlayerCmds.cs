@@ -14,15 +14,15 @@ public class HandlePlayerCmds : NetworkedBehaviour
     readonly CustomTypes.PlayerCmdSet playerCmdSet = new CustomTypes.PlayerCmdSet();
     float lastPlayerCmdRecordTime = 0.0f;
 
-    ulong clientSeq = 0;
-    Dictionary<ulong, ulong> serverSeqDict = new Dictionary<ulong, ulong>();
+    uint seq = 0;
+    Dictionary<ulong, CustomTypes.SeqCheck> seqCheckDict = new Dictionary<ulong, CustomTypes.SeqCheck>();
 
     void ClientDisconnected(ulong clientId)
     {
         if (playerCmdsDict.ContainsKey(clientId))
             playerCmdsDict.Remove(clientId);
-        if (serverSeqDict.ContainsKey(clientId))
-            serverSeqDict.Remove(clientId);
+        if (seqCheckDict.ContainsKey(clientId))
+            seqCheckDict.Remove(clientId);
     }
 
     void Start()
@@ -55,9 +55,9 @@ public class HandlePlayerCmds : NetworkedBehaviour
         // Send out after recording Max
         if (playerCmdSet.cmdIndex == CustomTypes.PlayerCmdSet.Max)
         {
-            clientSeq++;
             // FIXME: Send if cmds are empty?
-            InvokeServerRpc(ReceivePlayerCmds, clientSeq, playerCmdSet.playerCmds);
+            InvokeServerRpc(ReceivePlayerCmds, seq, playerCmdSet.playerCmds);
+            seq++;
             playerCmdSet.cmdIndex = 0;
         }
     }
@@ -66,27 +66,19 @@ public class HandlePlayerCmds : NetworkedBehaviour
     static public Dictionary<ulong, CustomTypes.PlayerCmdSet> playerCmdsDict = new Dictionary<ulong, CustomTypes.PlayerCmdSet>();
 
     [ServerRPC(RequireOwnership = false)]
-    public void ReceivePlayerCmds(ulong seq, CustomTypes.PlayerCmd[] playerCmds)
+    public void ReceivePlayerCmds(uint seq, CustomTypes.PlayerCmd[] playerCmds)
     {
         CustomTypes.PlayerCmdSet playerCmdSet;
         ulong clientId = ExecutingRpcSender;
 
-        if (serverSeqDict.ContainsKey(clientId))
+        if (seqCheckDict.ContainsKey(clientId))
         {
-            if (seq <= serverSeqDict[clientId])
-            {
-                //Debug.Log($"Client {clientId} cmd seq was {seq}, expected {serverSeqDict[clientId] + 1}. Dropping!");
+            if (!seqCheckDict[clientId].AssignNew(seq))
                 return;
-            }
-            if (seq != serverSeqDict[clientId] + 1)
-            {
-                //Debug.Log($"Client {clientId} cmd seq was {seq}, expected {serverSeqDict[clientId] + 1}");
-            }
-            serverSeqDict[clientId] = seq;
         }
         else
         {
-            serverSeqDict.Add(clientId, seq);
+            seqCheckDict.Add(clientId, new CustomTypes.SeqCheck { seq = seq });
         }
 
         if (playerCmdsDict.ContainsKey(clientId))
