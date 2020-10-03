@@ -104,7 +104,7 @@ public class ServerPlayerObjects : NetworkedBehaviour
             {
                 // New player so create game object
                 playerObject = new CustomTypes.PlayerObject();
-                playerObject.obj = Instantiate(clientPlayerObjects.playerPrefab);
+                playerObject.obj = Instantiate(clientPlayerObjects.playerPrefab, clientPlayerObjects.playerStart.transform.position, clientPlayerObjects.playerStart.transform.rotation);
                 playerObject.obj.layer = LayerMask.NameToLayer("Server");
                 playerObject.obj.GetComponent<MeshRenderer>().material.color = Color.red;
                 playerObject.obj.name = $"Server {playerObject.obj.name} {clientId}";

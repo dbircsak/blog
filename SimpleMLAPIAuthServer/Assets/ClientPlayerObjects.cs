@@ -9,6 +9,8 @@ public class ClientPlayerObjects : NetworkedBehaviour
 {
     // What is used when new player created
     public GameObject playerPrefab;
+    // Where to start all players
+    public GameObject playerStart;
     // Remember last player states received from server
     List<CustomTypes.PlayerState> playerStates = new List<CustomTypes.PlayerState>();
     // Remember all player states as gameObjects
@@ -42,7 +44,7 @@ public class ClientPlayerObjects : NetworkedBehaviour
                 {
                     // New player state so create game object
                     CustomTypes.PlayerObject playerObject = new CustomTypes.PlayerObject();
-                    playerObject.obj = Instantiate(playerPrefab);
+                    playerObject.obj = Instantiate(playerPrefab, playerStart.transform.position, playerStart.transform.rotation);
                     playerObject.obj.layer = LayerMask.NameToLayer("Client");
                     playerObject.obj.GetComponent<MeshRenderer>().material.color = Color.blue;
                     playerObject.obj.name = $"Client {playerObject.obj.name} {item.clientId}";
