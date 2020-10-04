@@ -11,11 +11,11 @@ public class ServerPlayerObjects : NetworkedBehaviour
     // How fast we send out state of all players to all clients
     static readonly uint PlayerStatesSendRate = 20; // Per second
 
-    readonly float turnSpeed = 3.0f;
-    readonly float moveDirectionSpeed = 8.0f;
-    readonly float runSpeed = 10.0f;
-    readonly float jumpSpeed = 8.0f;
-    readonly float gravitySpeed = 20.0f;
+    static readonly float turnSpeed = 3.0f;
+    static readonly float moveDirectionSpeed = 8.0f;
+    static readonly float runSpeed = 10.0f;
+    static readonly float jumpSpeed = 8.0f;
+    static readonly float gravitySpeed = 20.0f;
 
     // Server remembers all client physic objects here
     CustomTypes.PlayerObjectDict playerObjectDict = new CustomTypes.PlayerObjectDict();
@@ -36,10 +36,10 @@ public class ServerPlayerObjects : NetworkedBehaviour
         NetworkingManager.Singleton.OnClientDisconnectCallback += ClientDisconnected;
     }
 
-    void Move(CustomTypes.PlayerObject playerObject, CustomTypes.PlayerCmd playerCmd)
+    static public void Move(CustomTypes.PlayerObject playerObject, CustomTypes.PlayerCmd playerCmd)
     {
-        var h = playerCmd.horizontal;
-        var v = playerCmd.vertical;
+        float h = Mathf.Clamp(playerCmd.horizontal, -1.0f, 1.0f); // Stop cheating - invalid values
+        float v = Mathf.Clamp(playerCmd.vertical, -1.0f, 1.0f);
 
         playerObject.obj.transform.Rotate(0, h * turnSpeed, 0); // Turn left/right
 
@@ -102,6 +102,13 @@ public class ServerPlayerObjects : NetworkedBehaviour
             }
             else
             {
+                // Fix a bug in MLAPI where it doesn't call OnClientDisconnectCallback for Host
+                if (!NetworkingManager.Singleton.ConnectedClients.ContainsKey(clientId))
+                {
+                    HandlePlayerCmds.playerCmdsDict.Remove(clientId);
+                    continue;
+                }
+
                 // New player so create game object
                 playerObject = new CustomTypes.PlayerObject();
                 playerObject.obj = Instantiate(clientPlayerObjects.playerPrefab, clientPlayerObjects.playerStart.transform.position, clientPlayerObjects.playerStart.transform.rotation);
