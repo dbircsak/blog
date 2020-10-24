@@ -16,6 +16,7 @@ public class ServerPlayerObjects : NetworkedBehaviour
     static readonly float runSpeed = 10.0f;
     static readonly float jumpSpeed = 8.0f;
     static readonly float gravitySpeed = 20.0f;
+    static readonly float horizVertSpeed = 0.005f;
 
     // Server remembers all client physic objects here
     CustomTypes.PlayerObjectDict playerObjectDict = new CustomTypes.PlayerObjectDict();
@@ -38,10 +39,22 @@ public class ServerPlayerObjects : NetworkedBehaviour
 
     static public void Move(CustomTypes.PlayerObject playerObject, CustomTypes.PlayerCmd playerCmd)
     {
-        float h = Mathf.Clamp(playerCmd.horizontal, -1.0f, 1.0f); // Stop cheating - invalid values
-        float v = Mathf.Clamp(playerCmd.vertical, -1.0f, 1.0f);
+        if (playerCmd.horizontal > 0)
+            playerObject.horizontal += horizVertSpeed;
+        else if (playerCmd.horizontal < 0)
+            playerObject.horizontal -= horizVertSpeed;
+        else
+            playerObject.horizontal = 0.0f;
+        if (playerCmd.vertical > 0)
+            playerObject.vertical += horizVertSpeed;
+        else if (playerCmd.vertical < 0)
+            playerObject.vertical -= horizVertSpeed;
+        else
+            playerObject.vertical = 0.0f;
+        playerObject.horizontal = Mathf.Clamp(playerObject.horizontal, -1.0f, 1.0f);
+        playerObject.vertical = Mathf.Clamp(playerObject.vertical, -1.0f, 1.0f);
 
-        playerObject.obj.transform.Rotate(0, h * turnSpeed, 0); // Turn left/right
+        playerObject.obj.transform.Rotate(0, playerObject.horizontal * turnSpeed, 0); // Turn left/right
 
         // Only allow user control when on ground
         if (playerObject.controller.isGrounded)
@@ -49,11 +62,11 @@ public class ServerPlayerObjects : NetworkedBehaviour
             if (playerCmd.mouseButton1)
             {
                 if (playerCmd.mouseButton0)
-                    v = 1; // Move player forward if both buttons down
-                playerObject.moveDirection = new Vector3(h, 0, v); // Strafe
+                    playerObject.vertical = 1; // Move player forward if both buttons down
+                playerObject.moveDirection = new Vector3(playerObject.horizontal, 0, playerObject.vertical); // Strafe
             }
             else
-                playerObject.moveDirection = Vector3.forward * v; // Move forward/backward
+                playerObject.moveDirection = Vector3.forward * playerObject.vertical; // Move forward/backward
 
             playerObject.moveDirection = playerObject.obj.transform.TransformDirection(playerObject.moveDirection);
             playerObject.moveDirection *= moveDirectionSpeed;

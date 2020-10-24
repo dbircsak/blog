@@ -15,8 +15,8 @@ public class CustomTypes : NetworkedBehaviour
         public bool mouseButton1;
         public bool jumpButton;
         public bool leftShiftKey;
-        public float horizontal;
-        public float vertical;
+        public int horizontal;
+        public int vertical;
     }
 
     // Sent from client to server
@@ -41,6 +41,8 @@ public class CustomTypes : NetworkedBehaviour
         public GameObject obj;
         public CharacterController controller;
         public Vector3 moveDirection;
+        public float horizontal;
+        public float vertical;
     }
 
     public class PlayerObjectDict
@@ -75,12 +77,13 @@ public class CustomTypes : NetworkedBehaviour
         // If old then accept it after third time (show mercy)
         public bool AssignNew(uint newSeq)
         {
-            if (newSeq <= seq && miss < 3)
-            {
-                //Debug.Log($"{newSeq} seq less than {seq}");
-                miss++;
-                return false;
-            }
+            // Don't use for now
+            //if (newSeq <= seq && miss < 3)
+            //{
+            //    //Debug.Log($"{newSeq} seq less than {seq}");
+            //    miss++;
+            //    return false;
+            //}
             seq = newSeq;
             miss = 0;
             return true;
@@ -98,8 +101,8 @@ public class CustomTypes : NetworkedBehaviour
                 writer.WriteBool(instance[i].mouseButton1);
                 writer.WriteBool(instance[i].jumpButton);
                 writer.WriteBool(instance[i].leftShiftKey);
-                writer.WriteSinglePacked(instance[i].horizontal);
-                writer.WriteSinglePacked(instance[i].vertical);
+                writer.WriteInt32Packed(instance[i].horizontal);
+                writer.WriteInt32Packed(instance[i].vertical);
             }
         }
     }
@@ -118,8 +121,8 @@ public class CustomTypes : NetworkedBehaviour
                 playerCmds[i].mouseButton1 = reader.ReadBool();
                 playerCmds[i].jumpButton = reader.ReadBool();
                 playerCmds[i].leftShiftKey = reader.ReadBool();
-                playerCmds[i].horizontal = reader.ReadSinglePacked();
-                playerCmds[i].vertical = reader.ReadSinglePacked();
+                playerCmds[i].horizontal = reader.ReadInt32Packed();
+                playerCmds[i].vertical = reader.ReadInt32Packed();
             }
         }
         return playerCmds;

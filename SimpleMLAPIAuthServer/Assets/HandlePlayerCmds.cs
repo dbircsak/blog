@@ -73,14 +73,20 @@ public class HandlePlayerCmds : NetworkedBehaviour
         playerCmd.mouseButton1 = Input.GetMouseButton(1);
         playerCmd.jumpButton = Input.GetButton("Jump");
         playerCmd.leftShiftKey = Input.GetKey(KeyCode.LeftShift);
-        playerCmd.horizontal = Input.GetAxis("Horizontal");
-        playerCmd.vertical = Input.GetAxis("Vertical");
-        // Add some fake cheating
-        // FIXME: Can we stop rapid acceleration?
-        if ((playerCmd.horizontal == 1.0f || playerCmd.horizontal == -1.0f) && Random.Range(0, 10) == 0)
-            playerCmd.horizontal *= 10.0f;
-        if ((playerCmd.vertical == 1.0f || playerCmd.vertical == -1.0f) && Random.Range(0, 10) == 0)
-            playerCmd.vertical *= 10.0f;
+        float h = Input.GetAxis("Horizontal");
+        if (h > 0.0f)
+            playerCmd.horizontal = 1;
+        else if (h < 0.0f)
+            playerCmd.horizontal = -1;
+        else
+            playerCmd.horizontal = 0;
+        float v = Input.GetAxis("Vertical");
+        if (v > 0.0f)
+            playerCmd.vertical = 1;
+        else if (v < 0.0f)
+            playerCmd.vertical = -1;
+        else
+            playerCmd.vertical = 0;
         lastPlayerCmd = playerCmd; // For localPlayerObject
         playerCmdSet.cmdIndex++;
 
