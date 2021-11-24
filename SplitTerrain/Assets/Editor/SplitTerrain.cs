@@ -120,7 +120,7 @@ public class SplitTerrain : EditorWindow
         // Copy over all vars
         newTerrain.bakeLightProbesForTrees = origTerrain.bakeLightProbesForTrees;
         newTerrain.basemapDistance = origTerrain.basemapDistance;
-        newTerrain.castShadows = origTerrain.castShadows;
+        newTerrain.shadowCastingMode = origTerrain.shadowCastingMode;
         newTerrain.collectDetailPatches = origTerrain.collectDetailPatches;
         newTerrain.detailObjectDensity = origTerrain.detailObjectDensity;
         newTerrain.detailObjectDistance = origTerrain.detailObjectDistance;
@@ -129,12 +129,10 @@ public class SplitTerrain : EditorWindow
         newTerrain.editorRenderFlags = origTerrain.editorRenderFlags;
         newTerrain.heightmapMaximumLOD = origTerrain.heightmapMaximumLOD;
         newTerrain.heightmapPixelError = origTerrain.heightmapPixelError;
-        newTerrain.legacyShininess = origTerrain.legacyShininess;
-        newTerrain.legacySpecular = origTerrain.legacySpecular;
+        newTerrain.materialTemplate = origTerrain.materialTemplate;
         newTerrain.lightmapIndex = origTerrain.lightmapIndex;
         newTerrain.lightmapScaleOffset = origTerrain.lightmapScaleOffset;
         newTerrain.materialTemplate = origTerrain.materialTemplate;
-        newTerrain.materialType = origTerrain.materialType;
         newTerrain.realtimeLightmapIndex = origTerrain.realtimeLightmapIndex;
         newTerrain.realtimeLightmapScaleOffset = origTerrain.realtimeLightmapScaleOffset;
         newTerrain.reflectionProbeUsage = origTerrain.reflectionProbeUsage;
@@ -143,7 +141,7 @@ public class SplitTerrain : EditorWindow
         newTerrain.treeDistance = origTerrain.treeDistance;
         newTerrain.treeMaximumFullLODCount = origTerrain.treeMaximumFullLODCount;
 
-        td.splatPrototypes = origTerrain.terrainData.splatPrototypes;
+        td.terrainLayers = origTerrain.terrainData.terrainLayers;
         td.treePrototypes = origTerrain.terrainData.treePrototypes;
         td.detailPrototypes = origTerrain.terrainData.detailPrototypes;
 
